@@ -1,0 +1,68 @@
+services:
+  tomcat:
+    image: tomcat:10.1-jdk17
+#    container_name: "${ARTIFACT_ID}-tomcat"
+    ports:
+      - "8080:8080"
+    command: >
+      bash -c "
+        /app/run-catalina.sh
+      "
+    volumes:
+      # Mapeia o diretório atual para dentro do contêiner
+      - .:${WORKDIR:-/app}
+      - ./conf/tomcat-users.xml:/usr/local/tomcat/conf/tomcat-users.xml:ro
+      - ./webapps/manager/META-INF/context.xml:/usr/local/tomcat/webapps/manager/META-INF/context.xml:ro
+      - ./secrets/manager-password:/usr/local/tomcat/secrets/manager-password:ro
+      - ./secrets/db-password:/usr/local/tomcat/secrets/db-password:ro
+#      - ./logs:/usr/local/tomcat/logs
+    environment:
+      WORKDIR: ${WORKDIR:-/app}
+      ARTIFACT_ID: ${ARTIFACT_ID:-$COMPOSE_PROJECT_NAME}
+      DB_RESOURCE_NAME: 'jdbc/helloworld'
+      DB_DRIVER_CLASS_NAME: 'org.postgresql.Driver'
+      DB_URL: 'jdbc:postgresql://postgres-1.localdomain/helloworld'
+      DB_USERNAME: 'user'
+      DB_PASSWORD_FILE: 'secrets/db-password'
+      MANAGER_PASSWORD_FILE: 'secrets/manager-password'
+    networks:
+      - app-network
+    depends_on:
+      - maven
+    healthcheck:
+      test: ["CMD", "test", "-f", "/usr/local/tomcat/webapps/${ARTIFACT_ID:-$COMPOSE_PROJECT_NAME}.war"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  maven:
+    container_name: maven
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - MAVEN_IMAGE=${MAVEN_IMAGE:-maven:3.8.8-eclipse-temurin-17}
+        - WORKDIR=${WORKDIR:-/app}
+        - USER_UID=${USER_UID:-1000}
+        - USER_GID=${USER_GID:-1000}
+        - USER_NAME=${USER_NAME:-username}
+    environment:
+      - WORKDIR=${WORKDIR:-/app}
+      - USER_UID=${USER_UID:-1000}
+      - USER_GID=${USER_GID:-1000}
+      - USER_NAME=${USER_NAME:-username}
+    command: >
+      bash -c "
+        mvn clean package        
+        chown -R ${USER_NAME}:${USER_NAME} ${WORKDIR}/target
+      "
+    volumes:
+      - .:${WORKDIR:-/app} # Mapeia o diretório atual para dentro do contêiner
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
