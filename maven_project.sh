@@ -52,14 +52,14 @@ function is_container_running() {
 echo ">>> ${BASH_SOURCE[0]} $ARGS"
 
 command=$1
-if [ ! -z "$command" ] && [ "$command" = "mvn_clean_package" ]; then
+if [ ! -z "$command" ] && [ "$command" = "mvn" ]; then
   # Compila o projeto utilizando o serviço Maven
   echo "--- Compilando o projeto com Maven..."
   cd "$PROJECT_ROOT_DIR" || exit 1
   sleep 0.5
   docker-compose down
-#  docker-compose run --rm maven bash -c "mvn clean package"
-  docker-compose up -d
+  docker-compose run --rm maven bash -c "mvn -X clean package"
+#  docker-compose up -d
 
 
   # Verifica o resultado da compilação
@@ -185,7 +185,7 @@ all:docker-compose.yml
 
 SERVICES_COMMANDS="
 all:deploy;undeploy;redeploy;status;restart;logs;up;down;
-maven:mvn-clean-package
+tomcat:mvn
 "
 
 SERVICES_DEPENDENCIES="
@@ -193,7 +193,7 @@ tomcat:maven
 "
 
 ARG_SERVICE_PARSE="
-maven-tomcat:tomcat
+tomcat:tomcat
 "
 
 EOF
