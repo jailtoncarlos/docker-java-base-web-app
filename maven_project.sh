@@ -57,11 +57,15 @@ if [ ! -z "$command" ] && [ "$command" = "mvn_clean_package" ]; then
   echo "--- Compilando o projeto com Maven..."
   cd "$PROJECT_ROOT_DIR" || exit 1
   sleep 0.5
-  docker-compose run --rm maven bash -c "mvn clean package"
+  docker-compose down
+#  docker-compose run --rm maven bash -c "mvn clean package"
+  docker-compose up -d
+
 
   # Verifica o resultado da compilação
   if [ $? -eq 0 ]; then
-    echo_success "Compilação bem-sucedida!"
+    echo_success "Compilação bem-sucedida!
+    Projeto está disponível em: \"http://localhost:8080/${ARTIFACT_ID}\""
   else
     echo_error "Falha na compilação."
     exit 1
